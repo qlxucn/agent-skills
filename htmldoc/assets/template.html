@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- REPLACE: document title in both languages -->
+<title data-en="Document Title" data-zh="文档标题">Document Title</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --bg:#ffffff;
+  --fg:#1b1f24;
+  --muted:#61697a;
+  --line:#e4e8ee;
+  --line-soft:#eef1f5;
+  --accent:#2563eb;
+  --accent-soft:#eef4ff;
+  --hover:#f1f3f7;
+  --sidebar-bg:#fafbfd;
+  --code-bg:#f4f6f9;
+  --sidebar-w:290px;
+  --warn:#b45309; --warn-bg:#fff8ec; --warn-line:#f5d9a8;
+  --ok:#15803d;   --ok-bg:#f0faf3;   --ok-line:#bfe6cb;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14171c; --fg:#e6e9ef; --muted:#9aa3b2; --line:#2a2f38; --line-soft:#22262e;
+    --accent:#7aa5ff; --accent-soft:#1b2436; --hover:#1d222a; --sidebar-bg:#111419; --code-bg:#1b1f26;
+    --warn:#e0a95a; --warn-bg:#2a2317; --warn-line:#4a3d24;
+    --ok:#6fce93;   --ok-bg:#152418;   --ok-line:#2b4632;
+  }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:auto;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  font-size:16px;line-height:1.75;
+}
+html[data-lang="zh"] body{line-height:1.85}
+
+/* --- the ONLY language switch rule --- */
+html[data-lang="en"] .zh{display:none !important}
+html[data-lang="zh"] .en{display:none !important}
+
+/* ============================================================
+   SIDEBAR  (floating nested TOC)
+   ============================================================ */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);z-index:40;
+  background:var(--sidebar-bg);border-right:1px solid var(--line);
+  overflow-y:auto;overscroll-behavior:contain;padding:22px 10px 48px;
+}
+.sidebar-head{
+  padding:0 12px 12px;font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.toc-toggle-all{
+  flex:0 0 22px;height:22px;padding:0;border:0;background:none;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:5px;
+}
+.toc-toggle-all:hover{background:var(--hover);color:var(--fg)}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc-row{display:flex;align-items:flex-start;gap:1px}
+.toc-row a{
+  flex:1;min-width:0;display:block;padding:5px 10px;border-radius:6px;
+  color:var(--muted);text-decoration:none;font-size:13.5px;line-height:1.5;
+  word-break:break-word;
+}
+.toc-row a:hover{background:var(--hover);color:var(--fg)}
+.toc-row a.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.toc-row a.active-parent{color:var(--fg)}
+.lvl-2 > .toc-row > a{font-size:14px;font-weight:600;color:var(--fg)}
+.lvl-4 > .toc-row > a{font-size:13px;opacity:.9}
+.toc-sub{margin:2px 0 4px 14px;padding-left:6px;border-left:1px solid var(--line)}
+.toc-caret{
+  flex:0 0 18px;height:26px;margin-top:1px;padding:0;border:0;background:none;
+  color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;
+}
+.toc-caret:hover{background:var(--hover);color:var(--fg)}
+.toc-caret svg{transition:transform .15s ease}
+.toc-caret.empty{visibility:hidden;pointer-events:none}
+li.collapsed > .toc-sub{display:none}
+li.collapsed > .toc-row > .toc-caret svg{transform:rotate(-90deg)}
+
+/* ============================================================
+   FLOATING CONTROLS
+   ============================================================ */
+.lang-btn,.menu-btn{
+  position:fixed;top:16px;z-index:60;height:36px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg);
+  font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.08);
+  font-family:inherit;
+}
+.lang-btn{right:20px;padding:0 13px}
+.lang-btn:hover,.menu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.menu-btn{display:none;left:16px;width:36px;padding:0}
+.scrim{display:none}
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+/* the tall bottom padding lets the last section scroll to the top, so it can go active in the TOC */
+main{margin-left:var(--sidebar-w);padding:56px 40px max(140px,45vh)}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:32px;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+.subtitle{font-size:17px;color:var(--muted);margin:0 0 6px}
+.meta{font-size:13px;color:var(--muted);margin:0 0 40px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+h2{font-size:23px;margin:56px 0 14px;padding-top:8px;letter-spacing:-.005em}
+h3{font-size:18px;margin:34px 0 10px}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--muted);text-transform:none}
+h2,h3,h4{scroll-margin-top:24px}
+p{margin:0 0 16px}
+ul,ol{margin:0 0 16px;padding-left:24px}
+li{margin:5px 0}
+a{color:var(--accent)}
+strong{font-weight:650}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+code{background:var(--code-bg);padding:2px 5px;border-radius:4px;font-size:.88em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code-bg);border:1px solid var(--line-soft);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;margin:0 0 18px;line-height:1.6}
+pre code{background:none;padding:0;font-size:13px}
+blockquote{margin:0 0 18px;padding:2px 0 2px 16px;border-left:3px solid var(--line);color:var(--muted)}
+
+/* tables scroll horizontally instead of breaking the page */
+.table-wrap{overflow-x:auto;margin:0 0 20px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{background:var(--hover);font-weight:650;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+
+/* callouts */
+.note{border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:8px;padding:12px 16px;margin:0 0 20px}
+.note > :last-child{margin-bottom:0}
+.note.warn{border-left-color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.note.ok{border-left-color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
+.note-title{font-weight:650;margin:0 0 4px}
+.note.warn .note-title{color:var(--warn)}
+.note.ok .note-title{color:var(--ok)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:0 0 22px}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--bg)}
+.card h4{margin:0 0 6px;color:var(--fg)}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+
+/* small inline label */
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);border:1px solid var(--line)}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:900px){
+  .sidebar{transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 24px rgba(0,0,0,.18)}
+  body.nav-open .sidebar{transform:none}
+  .scrim{display:block;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.4);opacity:0;
+    pointer-events:none;transition:opacity .22s ease}
+  body.nav-open .scrim{opacity:1;pointer-events:auto}
+  .menu-btn{display:flex}
+  main{margin-left:0;padding:66px 18px max(100px,40vh)}
+  h1{font-size:26px}
+  h2{font-size:20px;margin-top:42px}
+}
+
+@media print{
+  .sidebar,.lang-btn,.menu-btn,.scrim{display:none !important}
+  main{margin:0;padding:0}
+  a{color:inherit;text-decoration:none}
+  h2,h3{page-break-after:avoid}
+  pre,table,.note,.card{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== floating controls ===== -->
+<button class="menu-btn" id="menuBtn" type="button" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+    <path d="M2 4h12M2 8h12M2 12h12"/>
+  </svg>
+</button>
+
+<button class="lang-btn" id="langToggle" type="button" aria-label="Switch language">
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+    <circle cx="8" cy="8" r="6.4"/>
+    <path d="M1.6 8h12.8M8 1.6c1.9 2 2.9 4 2.9 6.4S9.9 12.4 8 14.4C6.1 12.4 5.1 10.4 5.1 8S6.1 3.6 8 1.6z"/>
+  </svg>
+  <span id="langLabel">中</span>
+</button>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- ===== floating nested TOC (auto-generated from h2/h3/h4) ===== -->
+<nav class="sidebar" id="sidebar" aria-label="Table of contents">
+  <div class="sidebar-head">
+    <span class="en">Contents</span><span class="zh">目录</span>
+    <button class="toc-toggle-all" id="tocToggleAll" type="button"></button>
+  </div>
+  <div class="toc"><ul id="tocList"></ul></div>
+</nav>
+
+<!-- ===== content ===== -->
+<main id="main">
+<div class="wrap">
+
+  <!-- REPLACE everything below with real content. Keep the .en/.zh pattern. -->
+  <h1><span class="en">Document Title</span><span class="zh">文档标题</span></h1>
+  <p class="subtitle"><span class="en">One line describing what this document is.</span><span class="zh">一句话说明这份文档是什么。</span></p>
+  <p class="meta"><span class="en">Author · Updated 2026-08-27</span><span class="zh">作者 · 更新于 2026-08-27</span></p>
+
+  <h2><span class="en">Overview</span><span class="zh">概览</span></h2>
+  <p>
+    <span class="en">Write each paragraph twice — once in each language — inside sibling spans. Only the active language is rendered.</span>
+    <span class="zh">每段内容写两遍——中英各一遍——放在相邻的 span 里。页面只渲染当前语言。</span>
+  </p>
+
+  <div class="note">
+    <p class="note-title"><span class="en">Note</span><span class="zh">提示</span></p>
+    <p><span class="en">Callouts come in three flavours: default, <code>.warn</code>, and <code>.ok</code>.</span>
+       <span class="zh">提示框有三种：默认、<code>.warn</code>、<code>.ok</code>。</span></p>
+  </div>
+
+  <h2><span class="en">Details</span><span class="zh">详细内容</span></h2>
+
+  <h3><span class="en">A subsection</span><span class="zh">一个子章节</span></h3>
+  <p><span class="en">Headings h2/h3/h4 automatically become the nested TOC on the left.</span>
+     <span class="zh">h2/h3/h4 标题会自动生成左侧的嵌套目录。</span></p>
+  <ul>
+    <li><span class="en">List items are bilingual too.</span><span class="zh">列表项同样是双语的。</span></li>
+    <li><span class="en">Keep both languages in the same <code>&lt;li&gt;</code>.</span><span class="zh">两种语言放在同一个 <code>&lt;li&gt;</code> 里。</span></li>
+  </ul>
+
+  <h4><span class="en">A deeper heading</span><span class="zh">更深一层的标题</span></h4>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th><span class="en">Field</span><span class="zh">字段</span></th>
+          <th><span class="en">Meaning</span><span class="zh">含义</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>data-lang</code></td>
+          <td><span class="en">Active language on &lt;html&gt;.</span><span class="zh">&lt;html&gt; 上的当前语言。</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3><span class="en">Another subsection</span><span class="zh">另一个子章节</span></h3>
+  <div class="cards">
+    <div class="card">
+      <h4><span class="en">Card one</span><span class="zh">卡片一</span></h4>
+      <p><span class="en">Short supporting text.</span><span class="zh">简短的补充说明。</span></p>
+    </div>
+    <div class="card">
+      <h4><span class="en">Card two</span><span class="zh">卡片二</span></h4>
+      <p><span class="en">Short supporting text.</span><span class="zh">简短的补充说明。</span></p>
+    </div>
+  </div>
+
+  <h2><span class="en">Reference</span><span class="zh">参考</span></h2>
+  <pre><code>// code blocks are language-neutral - do not duplicate them
+setLang('zh');</code></pre>
+
+</div>
+</main>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  /* ---------------- language ---------------- */
+  var btn = document.getElementById('langToggle');
+  var label = document.getElementById('langLabel');
+  var titleEl = document.querySelector('title');
+
+  function setLang(lang) {
+    root.setAttribute('data-lang', lang);
+    root.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+    if (titleEl && titleEl.dataset[lang]) document.title = titleEl.dataset[lang];
+    label.textContent = lang === 'zh' ? 'EN' : '中';
+    var swap = lang === 'zh' ? 'Switch to English' : '切换到中文';
+    btn.setAttribute('aria-label', swap + ' (P)');
+    btn.title = swap + ' (P)';
+    try { localStorage.setItem('doc-lang', lang); } catch (e) {}
+    syncToggleAll();
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem('doc-lang'); } catch (e) {}
+  setLang(saved === 'zh' || saved === 'en'
+    ? saved
+    : ((navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en'));
+
+  btn.addEventListener('click', function () {
+    setLang(root.getAttribute('data-lang') === 'zh' ? 'en' : 'zh');
+  });
+
+  /* press P anywhere to switch language - ignored while typing, and Cmd/Ctrl+P still prints */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'p' && e.key !== 'P') return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    e.preventDefault();
+    setLang(root.getAttribute('data-lang') === 'zh' ? 'en' : 'zh');
+  });
+
+  /* ---------------- build nested TOC ---------------- */
+  var main = document.getElementById('main');
+  var list = document.getElementById('tocList');
+  var heads = [].slice.call(main.querySelectorAll('h2, h3, h4')).filter(function (h) {
+    /* headings inside cards/callouts, or marked data-no-toc, stay out of the TOC */
+    return !h.hasAttribute('data-no-toc') && !h.closest('.card, .note');
+  });
+  var CARET = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5L5 6.5l3-3"/></svg>';
+  var seen = {};
+
+  function textIn(h, cls) {
+    var n = h.querySelector('.' + cls);
+    return (n ? n.textContent : h.textContent).trim();
+  }
+  function slugify(t) {
+    var s = t.toLowerCase().replace(/[^a-z0-9一-龥]+/g, '-').replace(/^-+|-+$/g, '') || 'section';
+    if (seen[s]) { seen[s]++; s += '-' + seen[s]; } else { seen[s] = 1; }
+    return s;
+  }
+
+  var containers = { 2: list }, lastLi = {};
+
+  heads.forEach(function (h) {
+    var lvl = Math.min(4, Math.max(2, parseInt(h.tagName.charAt(1), 10)));
+    if (!h.id) h.id = slugify(textIn(h, 'en'));
+
+    if (!containers[lvl]) {
+      var host = lastLi[lvl - 1];
+      if (host) {
+        var sub = document.createElement('ul');
+        sub.className = 'toc-sub';
+        host.appendChild(sub);
+        containers[lvl] = sub;
+      } else {
+        containers[lvl] = containers[lvl - 1] || list;
+      }
+    }
+
+    var li = document.createElement('li');
+    li.className = 'lvl-' + lvl;
+
+    var row = document.createElement('div');
+    row.className = 'toc-row';
+
+    var caret = document.createElement('button');
+    caret.type = 'button';
+    caret.className = 'toc-caret empty';
+    caret.innerHTML = CARET;
+    caret.setAttribute('aria-label', 'Toggle section');
+
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.innerHTML = '<span class="en"></span><span class="zh"></span>';
+    a.firstChild.textContent = textIn(h, 'en');
+    a.lastChild.textContent = textIn(h, 'zh');
+
+    row.appendChild(caret);
+    row.appendChild(a);
+    li.appendChild(row);
+    containers[lvl].appendChild(li);
+    lastLi[lvl] = li;
+    h._tocLink = a;
+
+    for (var d = lvl + 1; d <= 4; d++) { containers[d] = null; lastLi[d] = null; }
+  });
+
+  /* enable carets on items that actually have children; every section starts collapsed */
+  var expandables = [];
+  [].slice.call(list.querySelectorAll('li')).forEach(function (li) {
+    var sub = li.querySelector('.toc-sub');
+    if (!sub || sub.parentNode !== li) return;
+    var caret = li.querySelector('.toc-caret');
+    caret.classList.remove('empty');
+    expandables.push(li);
+    setCollapsed(li, true);
+    caret.addEventListener('click', function () {
+      if (li.classList.contains('collapsed')) expandExclusive(li);
+      else setCollapsed(li, true);
+      syncToggleAll();
+    });
+  });
+
+  function setCollapsed(li, collapsed) {
+    li.classList.toggle('collapsed', collapsed);
+    var c = li.querySelector('.toc-row > .toc-caret');
+    if (c) c.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  /* accordion: opening one section folds every other one. Its ancestors stay open,
+     otherwise expanding a child would hide the child. */
+  function expandExclusive(li) {
+    var keep = [];
+    for (var p = li; p; p = p.parentNode.closest('li')) keep.push(p);
+    expandables.forEach(function (other) {
+      setCollapsed(other, keep.indexOf(other) === -1);
+    });
+  }
+
+  /* ---------------- expand / collapse all ---------------- */
+  var allBtn = document.getElementById('tocToggleAll');
+  var ICON_EXPAND = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5L7 1.5l3 3"/><path d="M4 9.5l3 3 3-3"/></svg>';
+  var ICON_COLLAPSE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5l3 3 3-3"/><path d="M4 12.5l3-3 3 3"/></svg>';
+  var ALL_LABEL = {
+    expand:   { en: 'Expand all',   zh: '\u5168\u90e8\u5c55\u5f00' },
+    collapse: { en: 'Collapse all', zh: '\u5168\u90e8\u6298\u53e0' }
+  };
+
+  /* the button always shows the action it performs, in the current language */
+  function syncToggleAll() {
+    if (!allBtn) return;
+    var open = anyExpanded();
+    var text = ALL_LABEL[open ? 'collapse' : 'expand'][root.getAttribute('data-lang') === 'zh' ? 'zh' : 'en'];
+    allBtn.innerHTML = open ? ICON_COLLAPSE : ICON_EXPAND;
+    allBtn.setAttribute('aria-expanded', String(open));
+    allBtn.setAttribute('aria-label', text);
+    allBtn.title = text;
+  }
+
+  function anyExpanded() {
+    return expandables.some(function (li) { return !li.classList.contains('collapsed'); });
+  }
+
+  if (allBtn) {
+    allBtn.addEventListener('click', function () {
+      var collapse = anyExpanded();
+      expandables.forEach(function (li) { setCollapsed(li, collapse); });
+      syncToggleAll();
+    });
+  }
+  syncToggleAll();
+
+  /* ---------------- scroll spy ---------------- */
+  var current = null, ticking = false;
+
+  function highlight() {
+    ticking = false;
+    var y = window.pageYOffset + 110, active = heads[0] || null;
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].getBoundingClientRect().top + window.pageYOffset <= y) active = heads[i];
+      else break;
+    }
+    /* at the very bottom nothing more can reach the top of the viewport - pin the last heading */
+    if (window.pageYOffset + window.innerHeight >= document.documentElement.scrollHeight - 4) {
+      active = heads[heads.length - 1] || active;
+    }
+    if (!active || active === current) return;
+    if (current && current._tocLink) {
+      current._tocLink.classList.remove('active');
+      var p = current._tocLink.closest('li');
+      while (p) { var pl = p.querySelector('.toc-row > a'); if (pl) pl.classList.remove('active-parent'); p = p.parentNode.closest('li'); }
+    }
+    current = active;
+    var link = active._tocLink;
+    if (!link) return;
+    link.classList.add('active');
+
+    /* mark the ancestors, but never auto-expand them: the TOC stays as the reader left it */
+    var li = link.closest('li');
+    var parent = li.parentNode.closest('li');
+    while (parent) {
+      var plink = parent.querySelector('.toc-row > a');
+      if (plink) plink.classList.add('active-parent');
+      parent = parent.parentNode.closest('li');
+    }
+
+    /* keep the active entry visible inside the sidebar only - when it is hidden
+       inside a collapsed section, track its nearest visible ancestor instead */
+    var vis = link;
+    if (!vis.offsetParent) {
+      vis = null;
+      var anc = li.parentNode.closest('li');
+      while (anc && !vis) {
+        var al = anc.querySelector('.toc-row > a');
+        if (al && al.offsetParent) vis = al;
+        anc = anc.parentNode.closest('li');
+      }
+      if (!vis) return;
+    }
+    var side = document.getElementById('sidebar');
+    var lt = vis.getBoundingClientRect(), st = side.getBoundingClientRect();
+    if (lt.top < st.top + 8) side.scrollTop -= (st.top + 8 - lt.top);
+    else if (lt.bottom > st.bottom - 8) side.scrollTop += (lt.bottom - st.bottom + 8);
+  }
+
+  function onScroll() {
+    if (!ticking) { ticking = true; requestAnimationFrame(highlight); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  /* re-run after the browser jumps to a #hash, which happens later than this script */
+  window.addEventListener('load', onScroll);
+  window.addEventListener('hashchange', onScroll);
+
+  /* a #hash deep link should open its section even though the TOC starts collapsed */
+  function revealHash() {
+    if (!location.hash) return;
+    var h = document.getElementById(location.hash.slice(1));
+    var link = h && h._tocLink;
+    if (!link) return;
+    var p = link.closest('li').parentNode.closest('li');
+    if (p) expandExclusive(p);
+    syncToggleAll();
+  }
+  window.addEventListener('hashchange', revealHash);
+  revealHash();
+
+  highlight();
+
+  /* ---------------- mobile drawer ---------------- */
+  var menuBtn = document.getElementById('menuBtn');
+  var scrim = document.getElementById('scrim');
+  function closeNav() {
+    document.body.classList.remove('nav-open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+  menuBtn.addEventListener('click', function () {
+    var open = document.body.classList.toggle('nav-open');
+    menuBtn.setAttribute('aria-expanded', String(open));
+  });
+  scrim.addEventListener('click', closeNav);
+  list.addEventListener('click', function (e) {
+    if (e.target.closest('a')) closeNav();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeNav(); });
+})();
+</script>
+</body>
+</html>
