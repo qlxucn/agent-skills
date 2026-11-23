@@ -27,6 +27,7 @@ One `.html` file, self-contained, no build step, no network:
 | Language toggle | Globe button fixed top-right, or press **`P`** anywhere; flips `<html data-lang>`; remembers the choice in `localStorage`; first visit follows `navigator.language` |
 | Keyboard | **`P`** toggles language — inert while typing in a field, and `Cmd/Ctrl+P` still prints. `Esc` closes the mobile drawer |
 | Bilingual content | Every visible string exists in both languages; CSS shows one, hides the other — no flicker, no re-render |
+| Layout | The content column grows with the window up to 1360px, so wide tables get room on big screens. Paragraphs, lists and callouts stop at a 920px reading width |
 | Responsive | Under 900px the sidebar becomes a drawer behind a hamburger button |
 | Print | Sidebar and buttons drop out; the active language prints clean |
 | Theme | Follows the OS light/dark preference |
@@ -72,6 +73,15 @@ One rule powers everything: `class="en"` and `class="zh"` mark language-specific
 - Headings inside `.card` and `.note` blocks are automatically excluded from the TOC. Add `data-no-toc` to any other heading you want kept out.
 - Ids are auto-generated from the English heading text, so `#section-name` anchors are stable and shareable.
 
+## Tables that read well
+
+Tables carry most of the data in a report, and they break in ways that prose doesn't. Blocks are in `references/components.md`.
+
+- **Header labels never wrap.** Keep them short in *both* languages, and check the English view, which runs about twice as wide. If several columns need the same qualifier, such as "(plan)" or "(USD, excl. tax)", move it into a **grouped two-row header** instead of repeating it in each label.
+- **Figures go in `.num` cells.** Put `class="num"` on the column's `th` and on every `td` holding a figure: right-aligned, tabular digits, no wrap. Never put a sentence in a `.num` cell, because it won't wrap and will push the other columns off the page. A descriptive row inside a numeric table, such as owners, dates or risks, uses plain `<td>`s.
+- **Protect the label column.** When long text sits beside short labels, add a `<colgroup>` with percentage widths so the first column keeps enough room.
+- Use `tr.total` for totals rows and `p.table-note` for the footnote under a table.
+
 ## Self-contained, always
 
 No CDN links, no web fonts, no remote images, no `fetch`. Images go in as `data:` URIs. The file must work from a USB stick on a plane.
@@ -90,6 +100,8 @@ Run through this before reporting done:
 [ ] Scroll the page: the active section is marked in the TOC and nothing auto-expands
 [ ] Expand a section, then click entries at three depths: each jumps straight to its heading, with no scrolling animation
 [ ] Narrow the window under 900px: hamburger opens the drawer, a link closes it
+[ ] On a wide window (1920px), the column widens and tables fill it, while paragraphs keep their reading width
+[ ] In both languages, at a laptop width (~1300px) and a wide one: no table scrolls sideways, and no first column is squeezed into a sliver (snippet below)
 [ ] Reload: the language choice persisted
 [ ] No console errors, no external network requests
 ```
@@ -101,3 +113,14 @@ grep -c 'class="en"' out.html; grep -c 'class="zh"' out.html   # counts should m
 ```
 
 If the counts differ, some string is missing a translation — find it before shipping.
+
+Quick table check. Paste it into the DevTools console, then run it again after switching language:
+
+```js
+document.querySelectorAll('.table-wrap').forEach((w, i) => {
+  const over = w.scrollWidth - w.clientWidth;
+  const lh = parseFloat(getComputedStyle(w).lineHeight);
+  const squeezed = [...w.querySelectorAll('tbody td:first-child')].some(td => td.clientHeight > 5 * lh);
+  if (over > 0 || squeezed) console.warn(`table ${i}:`, over > 0 ? `scrolls sideways by ${over}px` : 'first column wraps past ~4 lines', w);
+});
+```
