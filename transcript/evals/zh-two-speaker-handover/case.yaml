@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: zh-two-speaker-handover
+expected_outcome: |
+  A markdown file named 2026-03-12-<english-slug>.md with a Chinese summary and a two-speaker transcript; misheard terms such as Nacos and 钉钉 corrected; the explaining speaker identified as 王工; the reply lists both speakers with sample lines and asks the user to confirm them.
+context:
+  scaffold_script: place-files.sh

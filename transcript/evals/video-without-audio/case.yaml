@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: video-without-audio
+expected_outcome: |
+  The skill finds that demo-recording.mov has no audio track and tells the user there is nothing to transcribe (for example, the microphone wasn't recorded), without producing a transcript file or inventing content.
+context:
+  scaffold_script: place-files.sh

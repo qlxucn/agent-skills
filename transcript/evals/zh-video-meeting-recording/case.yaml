@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: zh-video-meeting-recording
+expected_outcome: |
+  The video is transcribed directly (no separately extracted audio file): a markdown file named 2026-10-21-<english-slug>.md next to payment-handover.mp4, with a Chinese summary and a two-speaker transcript whose source is the mp4; the reply lists both speakers with sample lines and asks the user to confirm them.
+context:
+  scaffold_script: place-files.sh

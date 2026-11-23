@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: en-three-speaker-standup
+expected_outcome: |
+  A markdown file named 2026-09-03-<english-slug>.md with an English summary (including action items for Priya and Tom) and a transcript where the three speakers are identified as Mark, Priya and Tom from how they address each other; the reply lists the speakers with sample lines and asks the user to confirm them.
+context:
+  scaffold_script: place-files.sh
